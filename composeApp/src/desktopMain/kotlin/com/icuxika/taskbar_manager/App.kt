@@ -163,13 +163,13 @@ fun MainWindowItem(mainWindowInfo: MainWindowInfo, onActivate: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "进程: ${mainWindowInfo.mainWindowTitle}",
+                    text = "进程: ${mainWindowInfo.processName}",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
 
                 Text(
-                    text = "PID: ${mainWindowInfo.mainWindowTitle}",
+                    text = "PID: ${mainWindowInfo.id}",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 )
