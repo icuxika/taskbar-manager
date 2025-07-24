@@ -6,6 +6,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.*
 import java.awt.Desktop
@@ -21,9 +22,12 @@ fun main() = application {
         visible = isVisible,
         title = "Taskbar Manager",
         icon = TrayIcon,
-        state = rememberWindowState(position = WindowPosition(windowPosition.x.dp, windowPosition.y.dp)),
+        state = rememberWindowState(
+            position = WindowPosition(windowPosition.x.dp, windowPosition.y.dp),
+            size = DpSize(480.dp, 720.dp)
+        ),
         undecorated = true,
-        transparent = false,
+        transparent = true,
         alwaysOnTop = true,
         resizable = false
     ) {

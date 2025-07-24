@@ -1,8 +1,7 @@
 package com.icuxika.taskbar_manager
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.VerticalScrollbar
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,52 +17,40 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.painterResource
+import kotlinx.coroutines.*
 import org.jetbrains.compose.ui.tooling.preview.Preview
-import taskbar_manager.composeapp.generated.resources.Res
-import taskbar_manager.composeapp.generated.resources.compose_multiplatform
+import java.io.BufferedReader
+import java.io.InputStreamReader
 
 @Composable
 @Preview
 fun App() {
     MaterialTheme {
-        var showContent by remember { mutableStateOf(false) }
+        var mainWindowList by remember { mutableStateOf<List<MainWindowInfo>>(emptyList()) }
         var isLoading by remember { mutableStateOf(false) }
         val scope = MainScope()
         Column(
             modifier = Modifier
                 .safeContentPadding()
                 .fillMaxSize()
-                .clip(RoundedCornerShape(16.dp)),
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.White),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Button(onClick = { showContent = !showContent }) {
-                Text("Click me!")
-            }
-            AnimatedVisibility(showContent) {
-                val greeting = remember { Greeting().greet() }
-                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Image(painterResource(Res.drawable.compose_multiplatform), null)
-                    Text("Compose: $greeting")
-                }
-            }
-
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp),
+                    .padding(16.dp, 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = "Windows 任务栏程序列表",
-                    fontSize = 20.sp,
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -71,7 +58,7 @@ fun App() {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (isLoading) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(24.dp),
                             strokeWidth = 2.dp
                         )
                         Spacer(modifier = Modifier.width(8.dp))
@@ -82,6 +69,9 @@ fun App() {
                             scope.launch {
                                 isLoading = true
                                 delay(3000)
+                                mainWindowList = withContext(Dispatchers.IO) {
+                                    getWindowInfoList()
+                                }
                                 isLoading = false
                             }
                         }
@@ -95,7 +85,7 @@ fun App() {
             }
 
             Text(
-                text = "当前运行程序: 27 个",
+                text = "当前运行程序: ${mainWindowList.size} 个",
                 fontSize = 16.sp,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 modifier = Modifier.padding(bottom = 8.dp)
@@ -108,8 +98,14 @@ fun App() {
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)
                 ) {
-                    items(mainWindowInfoList) { mainWindowInfo ->
-                        MainWindowItem(mainWindowInfo) {}
+                    items(mainWindowList) { mainWindowInfo ->
+                        MainWindowItem(mainWindowInfo) {
+                            scope.launch {
+                                withContext(Dispatchers.IO) {
+                                    activateWindow(mainWindowInfo.mainWindowHandle)
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -169,36 +165,75 @@ fun MainWindowItem(mainWindowInfo: MainWindowInfo, onActivate: () -> Unit) {
 }
 
 data class MainWindowInfo(
+    val id: String,
+    val processName: String,
     val mainWindowTitle: String,
     val mainWindowHandle: String
 )
 
+fun getWindowInfoList(): MutableList<MainWindowInfo> {
+    val windowInfoList = mutableListOf<MainWindowInfo>()
+
+    val processBuilder = ProcessBuilder(
+        "powershell", "-Command", $$"""
+            Get-Process | Where-Object { $_.MainWindowTitle -ne "" } | Select-Object Id, ProcessName, MainWindowTitle, MainWindowHandle | ConvertTo-Csv -NoTypeInformation
+        """.trimIndent()
+    )
+    val process = processBuilder.start()
+    val reader = BufferedReader(InputStreamReader(process.inputStream, Charsets.UTF_8))
+    var line = reader.readLine()
+    while (reader.readLine()?.also { line = it } != null) {
+        val parts = line.split(',').map { it.trim('"') }
+        if (parts.size >= 4) {
+            val windowInfo = MainWindowInfo(parts[0], parts[1], parts[2], parts[3])
+            windowInfoList.add(windowInfo)
+        }
+    }
+    process.waitFor()
+    return windowInfoList
+}
+
+fun activateWindow(mainWindowHandle: String) {
+    val processBuilder = ProcessBuilder(
+        "powershell", "-Command", $$"""
+Add-Type -TypeDefinition '
+    using System;
+    using System.Runtime.InteropServices;
+    public class Win32 {
+        [DllImport("user32.dll")]
+        public static extern bool SetForegroundWindow(IntPtr hWnd);
+        [DllImport("user32.dll")]
+        public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+        [DllImport("user32.dll")]
+        public static extern bool IsIconic(IntPtr hWnd);
+    }
+';
+$handle = [IntPtr]$$mainWindowHandle;
+if ([Win32]::IsIconic($handle)) {
+    [Win32]::ShowWindow($handle, [Win32]::SW_RESTORE);
+}
+[Win32]::SetForegroundWindow($handle);
+        """.trimIndent()
+    )
+    val process = processBuilder.start()
+    process.waitFor()
+}
+
 val mainWindowInfoList = listOf(
-    MainWindowInfo("窗口1", "123"),
-    MainWindowInfo("窗口2", "456"),
-    MainWindowInfo("窗口3", "789"),
-    MainWindowInfo("窗口4", "101112"),
-    MainWindowInfo("窗口5", "131415"),
-    MainWindowInfo("窗口6", "161718"),
-    MainWindowInfo("窗口7", "192021"),
-    MainWindowInfo("窗口8", "222324"),
-    MainWindowInfo("窗口9", "252627"),
-    MainWindowInfo("窗口10", "282930"),
-    MainWindowInfo("窗口11", "313233"),
-    MainWindowInfo("窗口12", "343536"),
-    MainWindowInfo("窗口13", "373839"),
-    MainWindowInfo("窗口14", "404142"),
-    MainWindowInfo("窗口15", "434445"),
-    MainWindowInfo("窗口16", "464748"),
-    MainWindowInfo("窗口17", "495051"),
-    MainWindowInfo("窗口18", "525354"),
-    MainWindowInfo("窗口19", "555657"),
-    MainWindowInfo("窗口20", "585960"),
-    MainWindowInfo("窗口21", "616263"),
-    MainWindowInfo("窗口22", "646566"),
-    MainWindowInfo("窗口23", "676869"),
-    MainWindowInfo("窗口24", "707172"),
-    MainWindowInfo("窗口25", "737475"),
-    MainWindowInfo("窗口26", "767778"),
-    MainWindowInfo("窗口27", "798081"),
+    MainWindowInfo("1", "chrome.exe", "Google Chrome", "0x12345678"),
+    MainWindowInfo("2", "notepad.exe", "无标题 - 记事本", "0x87654321"),
+    MainWindowInfo("3", "chrome.exe", "Google Chrome", "0x12345678"),
+    MainWindowInfo("4", "notepad.exe", "无标题 - 记事本", "0x87654321"),
+    MainWindowInfo("5", "chrome.exe", "Google Chrome", "0x12345678"),
+    MainWindowInfo("6", "notepad.exe", "无标题 - 记事本", "0x87654321"),
+    MainWindowInfo("7", "chrome.exe", "Google Chrome", "0x12345678"),
+    MainWindowInfo("8", "notepad.exe", "无标题 - 记事本", "0x87654321"),
+    MainWindowInfo("9", "chrome.exe", "Google Chrome", "0x12345678"),
+    MainWindowInfo("10", "notepad.exe", "无标题 - 记事本", "0x87654321"),
+    MainWindowInfo("11", "chrome.exe", "Google Chrome", "0x12345678"),
+    MainWindowInfo("12", "notepad.exe", "无标题 - 记事本", "0x87654321"),
+    MainWindowInfo("13", "chrome.exe", "Google Chrome", "0x12345678"),
+    MainWindowInfo("14", "notepad.exe", "无标题 - 记事本", "0x87654321"),
+    MainWindowInfo("15", "chrome.exe", "Google Chrome", "0x12345678"),
+    MainWindowInfo("16", "notepad.exe", "无标题 - 记事本", "0x87654321"),
 )
