@@ -21,10 +21,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.util.Collections.emptyList
 
 @Composable
 @Preview
@@ -68,7 +72,6 @@ fun App() {
                         onClick = {
                             scope.launch {
                                 isLoading = true
-                                delay(3000)
                                 mainWindowList = withContext(Dispatchers.IO) {
                                     getWindowInfoList()
                                 }
@@ -90,6 +93,16 @@ fun App() {
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 modifier = Modifier.padding(bottom = 8.dp)
             )
+
+            if (mainWindowList.isEmpty() && !isLoading) {
+                Text(
+                    text = "未获取到运行程序数据或运行出错",
+                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+
             val listState = rememberLazyListState()
             Box(modifier = Modifier.fillMaxSize()) {
                 LazyColumn(
@@ -116,6 +129,7 @@ fun App() {
                     )
                 )
             }
+
         }
     }
 }
@@ -172,51 +186,60 @@ data class MainWindowInfo(
 )
 
 fun getWindowInfoList(): MutableList<MainWindowInfo> {
-    val windowInfoList = mutableListOf<MainWindowInfo>()
+    try {
+        val windowInfoList = mutableListOf<MainWindowInfo>()
 
-    val processBuilder = ProcessBuilder(
-        "powershell", "-Command", $$"""
-            Get-Process | Where-Object { $_.MainWindowTitle -ne "" } | Select-Object Id, ProcessName, MainWindowTitle, MainWindowHandle | ConvertTo-Csv -NoTypeInformation
-        """.trimIndent()
-    )
-    val process = processBuilder.start()
-    val reader = BufferedReader(InputStreamReader(process.inputStream, Charsets.UTF_8))
-    var line = reader.readLine()
-    while (reader.readLine()?.also { line = it } != null) {
-        val parts = line.split(',').map { it.trim('"') }
-        if (parts.size >= 4) {
-            val windowInfo = MainWindowInfo(parts[0], parts[1], parts[2], parts[3])
-            windowInfoList.add(windowInfo)
+        val processBuilder = ProcessBuilder(
+            "powershell", "-Command", $$"""
+                Get-Process | Where-Object { $_.MainWindowTitle -ne "" } | Select-Object Id, ProcessName, MainWindowTitle, MainWindowHandle | ConvertTo-Csv -NoTypeInformation
+            """.trimIndent()
+        )
+        val process = processBuilder.start()
+        val reader = BufferedReader(InputStreamReader(process.inputStream, Charsets.UTF_8))
+        var line = reader.readLine()
+        while (reader.readLine()?.also { line = it } != null) {
+            val parts = line.split(',').map { it.trim('"') }
+            if (parts.size >= 4) {
+                val windowInfo = MainWindowInfo(parts[0], parts[1], parts[2], parts[3])
+                windowInfoList.add(windowInfo)
+            }
         }
+        process.waitFor()
+        return windowInfoList
+    } catch (e: Exception) {
+        println("获取窗口信息失败: ${e.message}")
+        return emptyList()
     }
-    process.waitFor()
-    return windowInfoList
 }
 
 fun activateWindow(mainWindowHandle: String) {
-    val processBuilder = ProcessBuilder(
-        "powershell", "-Command", $$"""
-Add-Type -TypeDefinition '
-    using System;
-    using System.Runtime.InteropServices;
-    public class Win32 {
-        [DllImport("user32.dll")]
-        public static extern bool SetForegroundWindow(IntPtr hWnd);
-        [DllImport("user32.dll")]
-        public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-        [DllImport("user32.dll")]
-        public static extern bool IsIconic(IntPtr hWnd);
+    try {
+        val processBuilder = ProcessBuilder(
+            "powershell", "-Command", $$"""
+        Add-Type -TypeDefinition '
+            using System;
+            using System.Runtime.InteropServices;
+            public class Win32 {
+                [DllImport("user32.dll")]
+                public static extern bool SetForegroundWindow(IntPtr hWnd);
+                [DllImport("user32.dll")]
+                public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+                [DllImport("user32.dll")]
+                public static extern bool IsIconic(IntPtr hWnd);
+            }
+        ';
+        $handle = [IntPtr]$$mainWindowHandle;
+        if ([Win32]::IsIconic($handle)) {
+            [Win32]::ShowWindow($handle, [Win32]::SW_RESTORE);
+        }
+        [Win32]::SetForegroundWindow($handle);
+            """.trimIndent()
+        )
+        val process = processBuilder.start()
+        process.waitFor()
+    } catch (e: Exception) {
+        println("激活窗口失败: ${e.message}")
     }
-';
-$handle = [IntPtr]$$mainWindowHandle;
-if ([Win32]::IsIconic($handle)) {
-    [Win32]::ShowWindow($handle, [Win32]::SW_RESTORE);
-}
-[Win32]::SetForegroundWindow($handle);
-        """.trimIndent()
-    )
-    val process = processBuilder.start()
-    process.waitFor()
 }
 
 val mainWindowInfoList = listOf(
