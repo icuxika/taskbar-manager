@@ -1,0 +1,12 @@
+--include-function EnumWindows
+--include-function SetForegroundWindow
+--include-function ShowWindow
+--include-function IsIconic
+--include-function GetWindowTextW
+--include-function GetWindowThreadProcessId
+
+--include-typedef HWND
+--include-typedef WNDENUMPROC
+--include-typedef LPARAM
+--include-typedef LPWSTR
+--include-typedef LPDWORD
