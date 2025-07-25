@@ -1,13 +1,12 @@
 package com.icuxika.taskbar_manager
 
-import androidx.compose.foundation.VerticalScrollbar
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Card
 import androidx.compose.material.icons.Icons
@@ -17,14 +16,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -37,12 +34,31 @@ fun App() {
         var mainWindowList by remember { mutableStateOf<List<MainWindowInfo>>(emptyList()) }
         var isLoading by remember { mutableStateOf(false) }
         val scope = MainScope()
+        val lazyListState = rememberLazyListState()
+
+        LaunchedEffect(Unit) {
+            while (true) {
+                mainWindowList = withContext(Dispatchers.IO) {
+                    getWindowInfoList()
+                }
+                delay(10000)
+            }
+        }
+
         Column(
             modifier = Modifier
                 .safeContentPadding()
                 .fillMaxSize()
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color.White),
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFF61d8f0),
+                            Color(0xFF93b9e0),
+                            Color(0xFFc3dcf5)
+                        )
+                    )
+                ),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Row(
@@ -56,7 +72,7 @@ fun App() {
                     text = "Windows 任务栏程序列表",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = Color.Black
                 )
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -90,7 +106,7 @@ fun App() {
             Text(
                 text = "当前运行程序: ${mainWindowList.size} 个",
                 fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                color = Color.Black,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
@@ -98,15 +114,14 @@ fun App() {
                 Text(
                     text = "未获取到运行程序数据或运行出错",
                     fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    color = Color(0xFFEF5350),
                     modifier = Modifier.padding(16.dp)
                 )
             }
 
-            val listState = rememberLazyListState()
             Box(modifier = Modifier.fillMaxSize()) {
                 LazyColumn(
-                    state = listState,
+                    state = lazyListState,
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)
@@ -125,7 +140,7 @@ fun App() {
                 VerticalScrollbar(
                     modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
                     adapter = rememberScrollbarAdapter(
-                        scrollState = listState
+                        scrollState = lazyListState
                     )
                 )
             }
@@ -136,12 +151,23 @@ fun App() {
 
 @Composable
 fun MainWindowItem(mainWindowInfo: MainWindowInfo, onActivate: () -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isHovered by interactionSource.collectIsHoveredAsState()
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onActivate() },
-        elevation = 2.dp,
-        shape = RoundedCornerShape(8.dp)
+            .hoverable(interactionSource)
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(
+                interactionSource = interactionSource,
+                indication = ripple(bounded = true)
+            ) { onActivate() },
+        elevation = if (isHovered) 4.dp else 2.dp,
+        shape = RoundedCornerShape(8.dp),
+        backgroundColor = if (isHovered)
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+        else
+            MaterialTheme.colorScheme.surface
     ) {
         Column(
             modifier = Modifier
