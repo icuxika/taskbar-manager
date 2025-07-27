@@ -13,53 +13,57 @@ import java.awt.Desktop
 import java.awt.event.WindowEvent
 import java.awt.event.WindowFocusListener
 
-fun main() = application {
-    var isVisible by remember { mutableStateOf(true) }
-    var windowPosition by remember { mutableStateOf(Offset.Zero) }
+fun main() {
+    application {
+        var isVisible by remember { mutableStateOf(true) }
+        var windowPosition by remember { mutableStateOf(Offset.Zero) }
 
-    Window(
-        onCloseRequest = { isVisible = false },
-        visible = isVisible,
-        title = "Taskbar Manager",
-        icon = TrayIcon,
-        state = rememberWindowState(
-            position = WindowPosition(windowPosition.x.dp, windowPosition.y.dp),
-            size = DpSize(480.dp, 720.dp)
-        ),
-        undecorated = true,
-        transparent = true,
-        alwaysOnTop = true,
-        resizable = false
-    ) {
-        this.window.addWindowFocusListener(object : WindowFocusListener {
-            override fun windowGainedFocus(e: WindowEvent?) {
-            }
+        Window(
+            onCloseRequest = { isVisible = false },
+            visible = isVisible,
+            title = "Taskbar Manager",
+            icon = TrayIcon,
+            state = rememberWindowState(
+                position = WindowPosition(windowPosition.x.dp, windowPosition.y.dp),
+                size = DpSize(480.dp, 720.dp)
+            ),
+            undecorated = true,
+            transparent = true,
+            alwaysOnTop = true,
+            resizable = false
+        ) {
+            this.window.addWindowFocusListener(object : WindowFocusListener {
+                override fun windowGainedFocus(e: WindowEvent?) {
+                }
 
-            override fun windowLostFocus(e: WindowEvent?) {
-                isVisible = false
-            }
-        })
-        App()
-        LaunchedEffect(isVisible) {
-            if (isVisible) {
-                Desktop.getDesktop().requestForeground(true)
+                override fun windowLostFocus(e: WindowEvent?) {
+                    isVisible = false
+                }
+            })
+            App()
+            LaunchedEffect(isVisible) {
+                if (isVisible) {
+                    if (!System.getProperty("os.name").lowercase().contains("win")) {
+                        Desktop.getDesktop().requestForeground(true)
+                    }
+                }
             }
         }
-    }
 
-    Tray(
-        TrayIcon,
-        tooltip = "Taskbar Manager",
-        onAction = {
-            isVisible = true
-        },
-        menu = {
-            Item("打开 Taskbar Manager", onClick = {
+        Tray(
+            TrayIcon,
+            tooltip = "Taskbar Manager",
+            onAction = {
                 isVisible = true
-            })
-            Item("退出 Taskbar Manager", onClick = ::exitApplication)
-        },
-    )
+            },
+            menu = {
+                Item("Open Taskbar Manager", onClick = {
+                    isVisible = true
+                })
+                Item("Exit Taskbar Manager", onClick = ::exitApplication)
+            },
+        )
+    }
 }
 
 object TrayIcon : Painter() {

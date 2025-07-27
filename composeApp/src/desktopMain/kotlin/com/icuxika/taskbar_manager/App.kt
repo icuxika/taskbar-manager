@@ -35,6 +35,7 @@ fun App() {
         var isLoading by remember { mutableStateOf(false) }
         val scope = MainScope()
         val lazyListState = rememberLazyListState()
+        val windowManager = remember { WindowManager() }
 
         LaunchedEffect(Unit) {
             while (true) {
@@ -130,7 +131,7 @@ fun App() {
                         MainWindowItem(mainWindowInfo) {
                             scope.launch {
                                 withContext(Dispatchers.IO) {
-                                    activateWindow(mainWindowInfo.mainWindowHandle)
+                                    windowManager.activateWindow(mainWindowInfo.mainWindowHandle.toLong())
                                 }
                             }
                         }
@@ -216,9 +217,9 @@ fun getWindowInfoList(): MutableList<MainWindowInfo> {
         val windowInfoList = mutableListOf<MainWindowInfo>()
 
         val processBuilder = ProcessBuilder(
-            "powershell", "-Command", $$"""
-                Get-Process | Where-Object { $_.MainWindowTitle -ne "" } | Select-Object Id, ProcessName, MainWindowTitle, MainWindowHandle | ConvertTo-Csv -NoTypeInformation
-            """.trimIndent()
+            "powershell",
+            "-Command",
+            $$"Get-Process | Where-Object { $_.MainWindowTitle -ne '' } | Select-Object Id, ProcessName, MainWindowTitle, MainWindowHandle | ConvertTo-Csv -NoTypeInformation",
         )
         val process = processBuilder.start()
         val reader = BufferedReader(InputStreamReader(process.inputStream, Charsets.UTF_8))
@@ -237,52 +238,3 @@ fun getWindowInfoList(): MutableList<MainWindowInfo> {
         return emptyList()
     }
 }
-
-fun activateWindow(mainWindowHandle: String) {
-    try {
-        val processBuilder = ProcessBuilder(
-            "powershell", "-Command", $$"""
-        Add-Type -TypeDefinition '
-            using System;
-            using System.Runtime.InteropServices;
-            public class Win32 {
-                [DllImport("user32.dll")]
-                public static extern bool SetForegroundWindow(IntPtr hWnd);
-                [DllImport("user32.dll")]
-                public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-                [DllImport("user32.dll")]
-                public static extern bool IsIconic(IntPtr hWnd);
-            }
-        ';
-        $handle = [IntPtr]$$mainWindowHandle;
-        if ([Win32]::IsIconic($handle)) {
-            [Win32]::ShowWindow($handle, [Win32]::SW_RESTORE);
-        }
-        [Win32]::SetForegroundWindow($handle);
-            """.trimIndent()
-        )
-        val process = processBuilder.start()
-        process.waitFor()
-    } catch (e: Exception) {
-        println("激活窗口失败: ${e.message}")
-    }
-}
-
-val mainWindowInfoList = listOf(
-    MainWindowInfo("1", "chrome.exe", "Google Chrome", "0x12345678"),
-    MainWindowInfo("2", "notepad.exe", "无标题 - 记事本", "0x87654321"),
-    MainWindowInfo("3", "chrome.exe", "Google Chrome", "0x12345678"),
-    MainWindowInfo("4", "notepad.exe", "无标题 - 记事本", "0x87654321"),
-    MainWindowInfo("5", "chrome.exe", "Google Chrome", "0x12345678"),
-    MainWindowInfo("6", "notepad.exe", "无标题 - 记事本", "0x87654321"),
-    MainWindowInfo("7", "chrome.exe", "Google Chrome", "0x12345678"),
-    MainWindowInfo("8", "notepad.exe", "无标题 - 记事本", "0x87654321"),
-    MainWindowInfo("9", "chrome.exe", "Google Chrome", "0x12345678"),
-    MainWindowInfo("10", "notepad.exe", "无标题 - 记事本", "0x87654321"),
-    MainWindowInfo("11", "chrome.exe", "Google Chrome", "0x12345678"),
-    MainWindowInfo("12", "notepad.exe", "无标题 - 记事本", "0x87654321"),
-    MainWindowInfo("13", "chrome.exe", "Google Chrome", "0x12345678"),
-    MainWindowInfo("14", "notepad.exe", "无标题 - 记事本", "0x87654321"),
-    MainWindowInfo("15", "chrome.exe", "Google Chrome", "0x12345678"),
-    MainWindowInfo("16", "notepad.exe", "无标题 - 记事本", "0x87654321"),
-)

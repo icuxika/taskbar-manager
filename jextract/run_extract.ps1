@@ -1,4 +1,4 @@
-$rootPath = Split-Path -Parent $PSScriptRoot
+$rootPath = $PSScriptRoot
 $headerPath = Join-Path -Path $rootPath -ChildPath "ffm.h"
 $includesPath = Join-Path -Path $rootPath -ChildPath "includes.txt"
 
