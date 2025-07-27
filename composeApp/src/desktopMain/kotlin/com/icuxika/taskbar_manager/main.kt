@@ -1,5 +1,6 @@
 package com.icuxika.taskbar_manager
 
+import androidx.compose.material.Icon
 import androidx.compose.runtime.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -8,7 +9,11 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.*
+import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowPosition
+import androidx.compose.ui.window.application
+import androidx.compose.ui.window.rememberWindowState
+import com.kdroid.composetray.tray.api.Tray
 import java.awt.Desktop
 import java.awt.event.WindowEvent
 import java.awt.event.WindowFocusListener
@@ -51,18 +56,20 @@ fun main() {
         }
 
         Tray(
-            TrayIcon,
+            iconContent = { Icon(TrayIcon, contentDescription = "", tint = Color(0xFFFFA500)) },
             tooltip = "Taskbar Manager",
-            onAction = {
+            primaryAction = {
                 isVisible = true
             },
-            menu = {
-                Item("Open Taskbar Manager", onClick = {
-                    isVisible = true
-                })
-                Item("Exit Taskbar Manager", onClick = ::exitApplication)
-            },
-        )
+            primaryActionLabel = "打开 Taskbar Manager"
+        ) {
+            Item(label = "打开 Taskbar Manager") {
+                isVisible = true
+            }
+            Item(label = "关闭 Taskbar Manager") {
+                exitApplication()
+            }
+        }
     }
 }
 
