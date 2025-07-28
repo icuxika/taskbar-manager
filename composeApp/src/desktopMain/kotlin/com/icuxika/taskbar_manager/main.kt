@@ -15,6 +15,8 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.kdroid.composetray.tray.api.Tray
 import java.awt.Desktop
+import java.awt.GraphicsEnvironment
+import java.awt.Toolkit
 import java.awt.event.WindowEvent
 import java.awt.event.WindowFocusListener
 
@@ -22,6 +24,17 @@ fun main() {
     application {
         var isVisible by remember { mutableStateOf(true) }
         var windowPosition by remember { mutableStateOf(Offset.Zero) }
+
+        val bounds = GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration.bounds
+        val screenInsets = Toolkit.getDefaultToolkit()
+            .getScreenInsets(GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration)
+
+        val workAreaWidth = bounds.width - screenInsets.left - screenInsets.right
+        val workAreaHeight = bounds.height - screenInsets.top - screenInsets.bottom
+
+        val x = screenInsets.left + workAreaWidth - 480 - 16
+        val y = screenInsets.top + workAreaHeight - 720 - 16
+        windowPosition = Offset(x.toFloat(), y.toFloat())
 
         Window(
             onCloseRequest = { isVisible = false },
