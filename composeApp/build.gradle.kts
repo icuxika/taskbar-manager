@@ -39,6 +39,7 @@ kotlin {
 compose.desktop {
     application {
         mainClass = "com.icuxika.taskbar_manager.MainKt"
+        jvmArgs += "--enable-native-access=ALL-UNNAMED"
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)

@@ -8,8 +8,7 @@ import java.lang.invoke.MethodHandles;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
-import static java.lang.foreign.ValueLayout.JAVA_BYTE;
-import static java.lang.foreign.ValueLayout.OfLong;
+import static java.lang.foreign.ValueLayout.*;
 
 public class ffm_h {
 
@@ -54,7 +53,8 @@ public class ffm_h {
         };
     }
 
-    static final SymbolLookup SYMBOL_LOOKUP = SymbolLookup.libraryLookup(System.mapLibraryName("user32"), LIBRARY_ARENA)
+    static final SymbolLookup SYMBOL_LOOKUP = SymbolLookup.libraryLookup(System.mapLibraryName("User32"), LIBRARY_ARENA)
+            .or(SymbolLookup.libraryLookup(System.mapLibraryName("Kernel32"), LIBRARY_ARENA))
             .or(SymbolLookup.loaderLookup())
             .or(Linker.nativeLinker().defaultLookup());
 
@@ -69,6 +69,29 @@ public class ffm_h {
             .withTargetLayout(MemoryLayout.sequenceLayout(java.lang.Long.MAX_VALUE, JAVA_BYTE));
     public static final ValueLayout.OfInt C_LONG = ValueLayout.JAVA_INT;
     public static final ValueLayout.OfDouble C_LONG_DOUBLE = ValueLayout.JAVA_DOUBLE;
+    private static final int GW_OWNER = (int) 4L;
+
+    /**
+     * {@snippet lang = c:
+     * #define GW_OWNER 4
+     *}
+     */
+    public static int GW_OWNER() {
+        return GW_OWNER;
+    }
+
+    /**
+     * {@snippet lang = c:
+     * typedef unsigned long DWORD
+     *}
+     */
+    public static final OfInt DWORD = ffm_h.C_LONG;
+    /**
+     * {@snippet lang = c:
+     * typedef int BOOL
+     *}
+     */
+    public static final OfInt BOOL = ffm_h.C_INT;
     /**
      * {@snippet lang = c:
      * typedef DWORD *LPDWORD
@@ -77,16 +100,34 @@ public class ffm_h {
     public static final AddressLayout LPDWORD = ffm_h.C_POINTER;
     /**
      * {@snippet lang = c:
+     * typedef unsigned int UINT
+     *}
+     */
+    public static final OfInt UINT = ffm_h.C_INT;
+    /**
+     * {@snippet lang = c:
      * typedef WCHAR *LPWSTR
      *}
      */
     public static final AddressLayout LPWSTR = ffm_h.C_POINTER;
     /**
      * {@snippet lang = c:
+     * typedef void *HANDLE
+     *}
+     */
+    public static final AddressLayout HANDLE = ffm_h.C_POINTER;
+    /**
+     * {@snippet lang = c:
      * typedef LONG_PTR LPARAM
      *}
      */
     public static final OfLong LPARAM = ffm_h.C_LONG_LONG;
+    /**
+     * {@snippet lang = c:
+     * typedef HINSTANCE HMODULE
+     *}
+     */
+    public static final AddressLayout HMODULE = ffm_h.C_POINTER;
     /**
      * {@snippet lang = c:
      * typedef struct HWND__ {
@@ -96,6 +137,124 @@ public class ffm_h {
      */
     public static final AddressLayout HWND = ffm_h.C_POINTER;
 
+    private static class CloseHandle {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+                ffm_h.C_INT,
+                ffm_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = ffm_h.findOrThrow("CloseHandle");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
+    }
+
+    /**
+     * Function descriptor for:
+     * {@snippet lang = c:
+     * BOOL CloseHandle(HANDLE hObject)
+     *}
+     */
+    public static FunctionDescriptor CloseHandle$descriptor() {
+        return CloseHandle.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang = c:
+     * BOOL CloseHandle(HANDLE hObject)
+     *}
+     */
+    public static MethodHandle CloseHandle$handle() {
+        return CloseHandle.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang = c:
+     * BOOL CloseHandle(HANDLE hObject)
+     *}
+     */
+    public static MemorySegment CloseHandle$address() {
+        return CloseHandle.ADDR;
+    }
+
+    /**
+     * {@snippet lang = c:
+     * BOOL CloseHandle(HANDLE hObject)
+     *}
+     */
+    public static int CloseHandle(MemorySegment hObject) {
+        var mh$ = CloseHandle.HANDLE;
+        try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("CloseHandle", hObject);
+            }
+            return (int) mh$.invokeExact(hObject);
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
+
+    private static class OpenProcess {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+                ffm_h.C_POINTER,
+                ffm_h.C_LONG,
+                ffm_h.C_INT,
+                ffm_h.C_LONG
+        );
+
+        public static final MemorySegment ADDR = ffm_h.findOrThrow("OpenProcess");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
+    }
+
+    /**
+     * Function descriptor for:
+     * {@snippet lang = c:
+     * HANDLE OpenProcess(DWORD dwDesiredAccess, BOOL bInheritHandle, DWORD dwProcessId)
+     *}
+     */
+    public static FunctionDescriptor OpenProcess$descriptor() {
+        return OpenProcess.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang = c:
+     * HANDLE OpenProcess(DWORD dwDesiredAccess, BOOL bInheritHandle, DWORD dwProcessId)
+     *}
+     */
+    public static MethodHandle OpenProcess$handle() {
+        return OpenProcess.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang = c:
+     * HANDLE OpenProcess(DWORD dwDesiredAccess, BOOL bInheritHandle, DWORD dwProcessId)
+     *}
+     */
+    public static MemorySegment OpenProcess$address() {
+        return OpenProcess.ADDR;
+    }
+
+    /**
+     * {@snippet lang = c:
+     * HANDLE OpenProcess(DWORD dwDesiredAccess, BOOL bInheritHandle, DWORD dwProcessId)
+     *}
+     */
+    public static MemorySegment OpenProcess(int dwDesiredAccess, int bInheritHandle, int dwProcessId) {
+        var mh$ = OpenProcess.HANDLE;
+        try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("OpenProcess", dwDesiredAccess, bInheritHandle, dwProcessId);
+            }
+            return (MemorySegment) mh$.invokeExact(dwDesiredAccess, bInheritHandle, dwProcessId);
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
+
     private static class ShowWindow {
         public static final FunctionDescriptor DESC = FunctionDescriptor.of(
                 ffm_h.C_INT,
@@ -103,9 +262,9 @@ public class ffm_h {
                 ffm_h.C_INT
         );
 
-        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(
-                ffm_h.findOrThrow("ShowWindow"),
-                DESC);
+        public static final MemorySegment ADDR = ffm_h.findOrThrow("ShowWindow");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
 
     /**
@@ -129,6 +288,16 @@ public class ffm_h {
     }
 
     /**
+     * Address for:
+     * {@snippet lang = c:
+     * BOOL ShowWindow(HWND hWnd, int nCmdShow)
+     *}
+     */
+    public static MemorySegment ShowWindow$address() {
+        return ShowWindow.ADDR;
+    }
+
+    /**
      * {@snippet lang = c:
      * BOOL ShowWindow(HWND hWnd, int nCmdShow)
      *}
@@ -145,15 +314,73 @@ public class ffm_h {
         }
     }
 
+    private static class IsWindowVisible {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+                ffm_h.C_INT,
+                ffm_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = ffm_h.findOrThrow("IsWindowVisible");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
+    }
+
+    /**
+     * Function descriptor for:
+     * {@snippet lang = c:
+     * BOOL IsWindowVisible(HWND hWnd)
+     *}
+     */
+    public static FunctionDescriptor IsWindowVisible$descriptor() {
+        return IsWindowVisible.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang = c:
+     * BOOL IsWindowVisible(HWND hWnd)
+     *}
+     */
+    public static MethodHandle IsWindowVisible$handle() {
+        return IsWindowVisible.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang = c:
+     * BOOL IsWindowVisible(HWND hWnd)
+     *}
+     */
+    public static MemorySegment IsWindowVisible$address() {
+        return IsWindowVisible.ADDR;
+    }
+
+    /**
+     * {@snippet lang = c:
+     * BOOL IsWindowVisible(HWND hWnd)
+     *}
+     */
+    public static int IsWindowVisible(MemorySegment hWnd) {
+        var mh$ = IsWindowVisible.HANDLE;
+        try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IsWindowVisible", hWnd);
+            }
+            return (int) mh$.invokeExact(hWnd);
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
+
     private static class IsIconic {
         public static final FunctionDescriptor DESC = FunctionDescriptor.of(
                 ffm_h.C_INT,
                 ffm_h.C_POINTER
         );
 
-        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(
-                ffm_h.findOrThrow("IsIconic"),
-                DESC);
+        public static final MemorySegment ADDR = ffm_h.findOrThrow("IsIconic");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
 
     /**
@@ -174,6 +401,16 @@ public class ffm_h {
      */
     public static MethodHandle IsIconic$handle() {
         return IsIconic.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang = c:
+     * BOOL IsIconic(HWND hWnd)
+     *}
+     */
+    public static MemorySegment IsIconic$address() {
+        return IsIconic.ADDR;
     }
 
     /**
@@ -199,9 +436,9 @@ public class ffm_h {
                 ffm_h.C_POINTER
         );
 
-        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(
-                ffm_h.findOrThrow("SetForegroundWindow"),
-                DESC);
+        public static final MemorySegment ADDR = ffm_h.findOrThrow("SetForegroundWindow");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
 
     /**
@@ -222,6 +459,16 @@ public class ffm_h {
      */
     public static MethodHandle SetForegroundWindow$handle() {
         return SetForegroundWindow.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang = c:
+     * BOOL SetForegroundWindow(HWND hWnd)
+     *}
+     */
+    public static MemorySegment SetForegroundWindow$address() {
+        return SetForegroundWindow.ADDR;
     }
 
     /**
@@ -249,9 +496,9 @@ public class ffm_h {
                 ffm_h.C_INT
         );
 
-        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(
-                ffm_h.findOrThrow("GetWindowTextW"),
-                DESC);
+        public static final MemorySegment ADDR = ffm_h.findOrThrow("GetWindowTextW");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
 
     /**
@@ -275,6 +522,16 @@ public class ffm_h {
     }
 
     /**
+     * Address for:
+     * {@snippet lang = c:
+     * int GetWindowTextW(HWND hWnd, LPWSTR lpString, int nMaxCount)
+     *}
+     */
+    public static MemorySegment GetWindowTextW$address() {
+        return GetWindowTextW.ADDR;
+    }
+
+    /**
      * {@snippet lang = c:
      * int GetWindowTextW(HWND hWnd, LPWSTR lpString, int nMaxCount)
      *}
@@ -291,6 +548,181 @@ public class ffm_h {
         }
     }
 
+    private static class GetWindowTextLengthW {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+                ffm_h.C_INT,
+                ffm_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = ffm_h.findOrThrow("GetWindowTextLengthW");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
+    }
+
+    /**
+     * Function descriptor for:
+     * {@snippet lang = c:
+     * int GetWindowTextLengthW(HWND hWnd)
+     *}
+     */
+    public static FunctionDescriptor GetWindowTextLengthW$descriptor() {
+        return GetWindowTextLengthW.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang = c:
+     * int GetWindowTextLengthW(HWND hWnd)
+     *}
+     */
+    public static MethodHandle GetWindowTextLengthW$handle() {
+        return GetWindowTextLengthW.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang = c:
+     * int GetWindowTextLengthW(HWND hWnd)
+     *}
+     */
+    public static MemorySegment GetWindowTextLengthW$address() {
+        return GetWindowTextLengthW.ADDR;
+    }
+
+    /**
+     * {@snippet lang = c:
+     * int GetWindowTextLengthW(HWND hWnd)
+     *}
+     */
+    public static int GetWindowTextLengthW(MemorySegment hWnd) {
+        var mh$ = GetWindowTextLengthW.HANDLE;
+        try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("GetWindowTextLengthW", hWnd);
+            }
+            return (int) mh$.invokeExact(hWnd);
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
+
+    private static class GetWindowLongW {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+                ffm_h.C_LONG,
+                ffm_h.C_POINTER,
+                ffm_h.C_INT
+        );
+
+        public static final MemorySegment ADDR = ffm_h.findOrThrow("GetWindowLongW");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
+    }
+
+    /**
+     * Function descriptor for:
+     * {@snippet lang = c:
+     * LONG GetWindowLongW(HWND hWnd, int nIndex)
+     *}
+     */
+    public static FunctionDescriptor GetWindowLongW$descriptor() {
+        return GetWindowLongW.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang = c:
+     * LONG GetWindowLongW(HWND hWnd, int nIndex)
+     *}
+     */
+    public static MethodHandle GetWindowLongW$handle() {
+        return GetWindowLongW.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang = c:
+     * LONG GetWindowLongW(HWND hWnd, int nIndex)
+     *}
+     */
+    public static MemorySegment GetWindowLongW$address() {
+        return GetWindowLongW.ADDR;
+    }
+
+    /**
+     * {@snippet lang = c:
+     * LONG GetWindowLongW(HWND hWnd, int nIndex)
+     *}
+     */
+    public static int GetWindowLongW(MemorySegment hWnd, int nIndex) {
+        var mh$ = GetWindowLongW.HANDLE;
+        try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("GetWindowLongW", hWnd, nIndex);
+            }
+            return (int) mh$.invokeExact(hWnd, nIndex);
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
+
+    private static class GetParent {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+                ffm_h.C_POINTER,
+                ffm_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = ffm_h.findOrThrow("GetParent");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
+    }
+
+    /**
+     * Function descriptor for:
+     * {@snippet lang = c:
+     * HWND GetParent(HWND hWnd)
+     *}
+     */
+    public static FunctionDescriptor GetParent$descriptor() {
+        return GetParent.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang = c:
+     * HWND GetParent(HWND hWnd)
+     *}
+     */
+    public static MethodHandle GetParent$handle() {
+        return GetParent.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang = c:
+     * HWND GetParent(HWND hWnd)
+     *}
+     */
+    public static MemorySegment GetParent$address() {
+        return GetParent.ADDR;
+    }
+
+    /**
+     * {@snippet lang = c:
+     * HWND GetParent(HWND hWnd)
+     *}
+     */
+    public static MemorySegment GetParent(MemorySegment hWnd) {
+        var mh$ = GetParent.HANDLE;
+        try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("GetParent", hWnd);
+            }
+            return (MemorySegment) mh$.invokeExact(hWnd);
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
+
     private static class EnumWindows {
         public static final FunctionDescriptor DESC = FunctionDescriptor.of(
                 ffm_h.C_INT,
@@ -298,9 +730,9 @@ public class ffm_h {
                 ffm_h.C_LONG_LONG
         );
 
-        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(
-                ffm_h.findOrThrow("EnumWindows"),
-                DESC);
+        public static final MemorySegment ADDR = ffm_h.findOrThrow("EnumWindows");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
 
     /**
@@ -324,6 +756,16 @@ public class ffm_h {
     }
 
     /**
+     * Address for:
+     * {@snippet lang = c:
+     * BOOL EnumWindows(WNDENUMPROC lpEnumFunc, LPARAM lParam)
+     *}
+     */
+    public static MemorySegment EnumWindows$address() {
+        return EnumWindows.ADDR;
+    }
+
+    /**
      * {@snippet lang = c:
      * BOOL EnumWindows(WNDENUMPROC lpEnumFunc, LPARAM lParam)
      *}
@@ -340,6 +782,66 @@ public class ffm_h {
         }
     }
 
+    private static class GetClassNameW {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+                ffm_h.C_INT,
+                ffm_h.C_POINTER,
+                ffm_h.C_POINTER,
+                ffm_h.C_INT
+        );
+
+        public static final MemorySegment ADDR = ffm_h.findOrThrow("GetClassNameW");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
+    }
+
+    /**
+     * Function descriptor for:
+     * {@snippet lang = c:
+     * int GetClassNameW(HWND hWnd, LPWSTR lpClassName, int nMaxCount)
+     *}
+     */
+    public static FunctionDescriptor GetClassNameW$descriptor() {
+        return GetClassNameW.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang = c:
+     * int GetClassNameW(HWND hWnd, LPWSTR lpClassName, int nMaxCount)
+     *}
+     */
+    public static MethodHandle GetClassNameW$handle() {
+        return GetClassNameW.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang = c:
+     * int GetClassNameW(HWND hWnd, LPWSTR lpClassName, int nMaxCount)
+     *}
+     */
+    public static MemorySegment GetClassNameW$address() {
+        return GetClassNameW.ADDR;
+    }
+
+    /**
+     * {@snippet lang = c:
+     * int GetClassNameW(HWND hWnd, LPWSTR lpClassName, int nMaxCount)
+     *}
+     */
+    public static int GetClassNameW(MemorySegment hWnd, MemorySegment lpClassName, int nMaxCount) {
+        var mh$ = GetClassNameW.HANDLE;
+        try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("GetClassNameW", hWnd, lpClassName, nMaxCount);
+            }
+            return (int) mh$.invokeExact(hWnd, lpClassName, nMaxCount);
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
+
     private static class GetWindowThreadProcessId {
         public static final FunctionDescriptor DESC = FunctionDescriptor.of(
                 ffm_h.C_LONG,
@@ -347,9 +849,9 @@ public class ffm_h {
                 ffm_h.C_POINTER
         );
 
-        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(
-                ffm_h.findOrThrow("GetWindowThreadProcessId"),
-                DESC);
+        public static final MemorySegment ADDR = ffm_h.findOrThrow("GetWindowThreadProcessId");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
 
     /**
@@ -373,6 +875,16 @@ public class ffm_h {
     }
 
     /**
+     * Address for:
+     * {@snippet lang = c:
+     * DWORD GetWindowThreadProcessId(HWND hWnd, LPDWORD lpdwProcessId)
+     *}
+     */
+    public static MemorySegment GetWindowThreadProcessId$address() {
+        return GetWindowThreadProcessId.ADDR;
+    }
+
+    /**
      * {@snippet lang = c:
      * DWORD GetWindowThreadProcessId(HWND hWnd, LPDWORD lpdwProcessId)
      *}
@@ -387,6 +899,109 @@ public class ffm_h {
         } catch (Throwable ex$) {
             throw new AssertionError("should not reach here", ex$);
         }
+    }
+
+    private static class GetWindow {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+                ffm_h.C_POINTER,
+                ffm_h.C_POINTER,
+                ffm_h.C_INT
+        );
+
+        public static final MemorySegment ADDR = ffm_h.findOrThrow("GetWindow");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
+    }
+
+    /**
+     * Function descriptor for:
+     * {@snippet lang = c:
+     * HWND GetWindow(HWND hWnd, UINT uCmd)
+     *}
+     */
+    public static FunctionDescriptor GetWindow$descriptor() {
+        return GetWindow.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang = c:
+     * HWND GetWindow(HWND hWnd, UINT uCmd)
+     *}
+     */
+    public static MethodHandle GetWindow$handle() {
+        return GetWindow.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang = c:
+     * HWND GetWindow(HWND hWnd, UINT uCmd)
+     *}
+     */
+    public static MemorySegment GetWindow$address() {
+        return GetWindow.ADDR;
+    }
+
+    /**
+     * {@snippet lang = c:
+     * HWND GetWindow(HWND hWnd, UINT uCmd)
+     *}
+     */
+    public static MemorySegment GetWindow(MemorySegment hWnd, int uCmd) {
+        var mh$ = GetWindow.HANDLE;
+        try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("GetWindow", hWnd, uCmd);
+            }
+            return (MemorySegment) mh$.invokeExact(hWnd, uCmd);
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
+
+    private static final int PROCESS_VM_READ = (int) 16L;
+
+    /**
+     * {@snippet lang = c:
+     * #define PROCESS_VM_READ 16
+     *}
+     */
+    public static int PROCESS_VM_READ() {
+        return PROCESS_VM_READ;
+    }
+
+    private static final int PROCESS_QUERY_INFORMATION = (int) 1024L;
+
+    /**
+     * {@snippet lang = c:
+     * #define PROCESS_QUERY_INFORMATION 1024
+     *}
+     */
+    public static int PROCESS_QUERY_INFORMATION() {
+        return PROCESS_QUERY_INFORMATION;
+    }
+
+    private static final int GWL_EXSTYLE = (int) -20L;
+
+    /**
+     * {@snippet lang = c:
+     * #define GWL_EXSTYLE -20
+     *}
+     */
+    public static int GWL_EXSTYLE() {
+        return GWL_EXSTYLE;
+    }
+
+    private static final int WS_EX_TOOLWINDOW = (int) 128L;
+
+    /**
+     * {@snippet lang = c:
+     * #define WS_EX_TOOLWINDOW 128
+     *}
+     */
+    public static int WS_EX_TOOLWINDOW() {
+        return WS_EX_TOOLWINDOW;
     }
 }
 

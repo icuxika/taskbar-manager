@@ -3,10 +3,29 @@
 --include-function ShowWindow
 --include-function IsIconic
 --include-function GetWindowTextW
+--include-function GetWindowTextLengthW
+--include-function IsWindowVisible
+--include-function GetWindowLongW
+--include-function GetWindow
+--include-function GetParent
+--include-function GetClassNameW
 --include-function GetWindowThreadProcessId
+--include-function OpenProcess
+--include-function CloseHandle
 
 --include-typedef HWND
 --include-typedef WNDENUMPROC
 --include-typedef LPARAM
 --include-typedef LPWSTR
 --include-typedef LPDWORD
+--include-typedef UINT
+--include-typedef DWORD
+--include-typedef BOOL
+--include-typedef HANDLE
+--include-typedef HMODULE
+
+--include-constant GWL_EXSTYLE
+--include-constant WS_EX_TOOLWINDOW
+--include-constant GW_OWNER
+--include-constant PROCESS_QUERY_INFORMATION
+--include-constant PROCESS_VM_READ

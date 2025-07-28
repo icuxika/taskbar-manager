@@ -23,8 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.*
 import org.jetbrains.compose.ui.tooling.preview.Preview
-import java.io.BufferedReader
-import java.io.InputStreamReader
+import java.lang.foreign.MemorySegment
 import java.util.Collections.emptyList
 
 @Composable
@@ -40,7 +39,7 @@ fun App() {
         LaunchedEffect(Unit) {
             while (true) {
                 mainWindowList = withContext(Dispatchers.IO) {
-                    getWindowInfoList()
+                    windowManager.getWindows()
                 }
                 delay(10000)
             }
@@ -90,7 +89,7 @@ fun App() {
                             scope.launch {
                                 isLoading = true
                                 mainWindowList = withContext(Dispatchers.IO) {
-                                    getWindowInfoList()
+                                    windowManager.getWindows()
                                 }
                                 isLoading = false
                             }
@@ -131,7 +130,7 @@ fun App() {
                         MainWindowItem(mainWindowInfo) {
                             scope.launch {
                                 withContext(Dispatchers.IO) {
-                                    windowManager.activateWindow(mainWindowInfo.mainWindowHandle.toLong())
+                                    windowManager.activateWindow(mainWindowInfo.hWnd)
                                 }
                             }
                         }
@@ -209,32 +208,5 @@ data class MainWindowInfo(
     val id: String,
     val processName: String,
     val mainWindowTitle: String,
-    val mainWindowHandle: String
+    val hWnd: MemorySegment
 )
-
-fun getWindowInfoList(): MutableList<MainWindowInfo> {
-    try {
-        val windowInfoList = mutableListOf<MainWindowInfo>()
-
-        val processBuilder = ProcessBuilder(
-            "powershell",
-            "-Command",
-            $$"Get-Process | Where-Object { $_.MainWindowTitle -ne '' } | Select-Object Id, ProcessName, MainWindowTitle, MainWindowHandle | ConvertTo-Csv -NoTypeInformation",
-        )
-        val process = processBuilder.start()
-        val reader = BufferedReader(InputStreamReader(process.inputStream, Charsets.UTF_8))
-        var line = reader.readLine()
-        while (reader.readLine()?.also { line = it } != null) {
-            val parts = line.split(',').map { it.trim('"') }
-            if (parts.size >= 4) {
-                val windowInfo = MainWindowInfo(parts[0], parts[1], parts[2], parts[3])
-                windowInfoList.add(windowInfo)
-            }
-        }
-        process.waitFor()
-        return windowInfoList
-    } catch (e: Exception) {
-        println("获取窗口信息失败: ${e.message}")
-        return emptyList()
-    }
-}

@@ -12,7 +12,7 @@ Write-Host "    includes.txt: $includesPath" -ForegroundColor Blue
 
 try {
     $jextractPath = Get-Command jextract -ErrorAction Stop
-    & $jextractPath --output $outputPath -t $targetPackage -l user32 "@$includesPath" $headerPath
+    & $jextractPath --output $outputPath -t $targetPackage -l User32 -l Kernel32 "@$includesPath" $headerPath
     Write-Host "jextract 已完成代码生成" -ForegroundColor Green
 }
 catch {

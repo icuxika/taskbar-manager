@@ -9,4 +9,10 @@ class ComposeAppDesktopTest {
     fun example() {
         assertEquals(3, 1 + 2)
     }
+
+    @Test
+    fun getWindows() {
+        val windowManager = WindowManager()
+        windowManager.getWindows()
+    }
 }
