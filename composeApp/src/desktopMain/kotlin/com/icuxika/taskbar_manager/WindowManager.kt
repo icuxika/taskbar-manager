@@ -75,7 +75,7 @@ class WindowManager {
 
                                             mainWindowInfoList.add(
                                                 MainWindowInfo(
-                                                    processId.toString(),
+                                                    "${processId}_${hWnd.address()}",
                                                     processName,
                                                     windowTitle,
                                                     hWnd

@@ -24,6 +24,7 @@ fun main() {
     application {
         var isVisible by remember { mutableStateOf(true) }
         var windowPosition by remember { mutableStateOf(Offset.Zero) }
+        var windowSize by remember { mutableStateOf(Size.Zero) }
 
         val bounds = GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration.bounds
         val screenInsets = Toolkit.getDefaultToolkit()
@@ -32,9 +33,12 @@ fun main() {
         val workAreaWidth = bounds.width - screenInsets.left - screenInsets.right
         val workAreaHeight = bounds.height - screenInsets.top - screenInsets.bottom
 
-        val x = screenInsets.left + workAreaWidth - 480 - 16
-        val y = screenInsets.top + workAreaHeight - 720 - 16
+        val w = 480
+        val h = bounds.height - screenInsets.bottom;
+        val x = screenInsets.left + workAreaWidth - w - 16
+        val y = screenInsets.top + workAreaHeight - h
         windowPosition = Offset(x.toFloat(), y.toFloat())
+        windowSize = Size(w.toFloat(), h.toFloat())
 
         Window(
             onCloseRequest = { isVisible = false },
@@ -43,7 +47,7 @@ fun main() {
             icon = TrayIcon,
             state = rememberWindowState(
                 position = WindowPosition(windowPosition.x.dp, windowPosition.y.dp),
-                size = DpSize(480.dp, 720.dp)
+                size = DpSize(windowSize.width.dp, windowSize.height.dp)
             ),
             undecorated = true,
             transparent = true,
