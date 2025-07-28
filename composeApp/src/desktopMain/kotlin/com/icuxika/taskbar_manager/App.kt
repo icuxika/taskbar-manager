@@ -5,12 +5,16 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Card
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -119,32 +123,155 @@ fun App() {
                 )
             }
 
-            Box(modifier = Modifier.fillMaxSize()) {
-                LazyColumn(
-                    state = lazyListState,
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)
-                ) {
-                    items(mainWindowList) { mainWindowInfo ->
-                        MainWindowItem(mainWindowInfo) {
-                            scope.launch {
-                                withContext(Dispatchers.IO) {
-                                    windowManager.activateWindow(mainWindowInfo.hWnd)
-                                }
+            AdvancedFilteredWindowList(mainWindowList, windowManager)
+
+        }
+    }
+}
+
+enum class FilterType {
+    ALL, PROCESS_NAME, WINDOW_TITLE
+}
+
+@Composable
+fun AdvancedFilteredWindowList(
+    mainWindowList: List<MainWindowInfo>,
+    windowManager: WindowManager,
+    lazyListState: LazyListState = rememberLazyListState()
+) {
+    var filterText by remember { mutableStateOf("") }
+    var filterType by remember { mutableStateOf(FilterType.ALL) }
+    val scope = rememberCoroutineScope()
+
+    // 根据过滤条件筛选窗口列表
+    val filteredList = remember(mainWindowList, filterText, filterType) {
+        if (filterText.isBlank()) {
+            mainWindowList
+        } else {
+            mainWindowList.filter { windowInfo ->
+                when (filterType) {
+                    FilterType.ALL ->
+                        windowInfo.processName.contains(filterText, ignoreCase = true) ||
+                                windowInfo.mainWindowTitle.contains(filterText, ignoreCase = true)
+
+                    FilterType.PROCESS_NAME ->
+                        windowInfo.processName.contains(filterText, ignoreCase = true)
+
+                    FilterType.WINDOW_TITLE ->
+                        windowInfo.mainWindowTitle.contains(filterText, ignoreCase = true)
+                }
+            }
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // 搜索框和过滤选项
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            OutlinedTextField(
+                value = filterText,
+                onValueChange = { filterText = it },
+                label = { Text("搜索") },
+                placeholder = { Text("输入关键词...") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "搜索"
+                    )
+                },
+                trailingIcon = {
+                    if (filterText.isNotEmpty()) {
+                        IconButton(onClick = { filterText = "" }) {
+                            Icon(
+                                imageVector = Icons.Default.Clear,
+                                contentDescription = "清除"
+                            )
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
+            // 过滤类型选择
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    onClick = { filterType = FilterType.ALL },
+                    label = { Text("全部") },
+                    selected = filterType == FilterType.ALL
+                )
+                FilterChip(
+                    onClick = { filterType = FilterType.PROCESS_NAME },
+                    label = { Text("进程名") },
+                    selected = filterType == FilterType.PROCESS_NAME
+                )
+                FilterChip(
+                    onClick = { filterType = FilterType.WINDOW_TITLE },
+                    label = { Text("窗口标题") },
+                    selected = filterType == FilterType.WINDOW_TITLE
+                )
+            }
+        }
+
+        // 其余代码与上面相同...
+        if (filterText.isNotEmpty()) {
+            Text(
+                text = "找到 ${filteredList.size} 个匹配项",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+            )
+        }
+
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                state = lazyListState,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)
+            ) {
+                items(filteredList) { mainWindowInfo ->
+                    MainWindowItem(mainWindowInfo) {
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                windowManager.activateWindow(mainWindowInfo.hWnd)
                             }
                         }
                     }
                 }
 
-                VerticalScrollbar(
-                    modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
-                    adapter = rememberScrollbarAdapter(
-                        scrollState = lazyListState
-                    )
-                )
+                if (filteredList.isEmpty() && filterText.isNotEmpty()) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SearchOff,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "未找到匹配的窗口",
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                    }
+                }
             }
 
+            VerticalScrollbar(
+                modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                adapter = rememberScrollbarAdapter(scrollState = lazyListState)
+            )
         }
     }
 }
